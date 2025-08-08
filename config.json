@@ -1,0 +1,36 @@
+{
+    "prefix": "!",
+    "embed_color": 3447003,
+    "currency_name": "kredity",
+    "currency_symbol": "💎",
+    "daily_amount": 100,
+    "work_min": 50,
+    "work_max": 200,
+    "automod": {
+        "spam_threshold": 5,
+        "spam_timeframe": 10,
+        "bad_words": [
+            "kurva",
+            "kokot",
+            "pičo",
+            "debil",
+            "idiot"
+        ],
+        "max_mentions": 5,
+        "max_emojis": 10,
+        "max_caps_percentage": 70
+    },
+    "music": {
+        "max_queue_length": 50,
+        "max_duration": 3600,
+        "default_volume": 0.5
+    },
+    "tickets": {
+        "category_name": "🎫 Support Tikety",
+        "support_role": "Support"
+    },
+    "moderation": {
+        "mute_role": "Ztišen",
+        "log_channel": "mod-log"
+    }
+}
