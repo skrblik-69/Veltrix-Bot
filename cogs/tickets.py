@@ -49,21 +49,14 @@ class TicketView(discord.ui.View):
             # Hledání kategorie pro tikety
             category_channel = discord.utils.get(
                 guild.categories, 
-                name=self.bot.config['tickets']['category_name']
+                name="🆘 | PODPORA | 🆘"
             )
             
             if not category_channel:
-                # Vytvoření kategorie pokud neexistuje
-                try:
-                    category_channel = await guild.create_category(
-                        self.bot.config['tickets']['category_name'],
-                        reason="Vytvoření kategorie pro support tikety"
-                    )
-                except discord.Forbidden:
-                    return await interaction.response.send_message(
-                        "❌ **Bot nemá oprávnění k vytváření kategorií!**",
-                        ephemeral=True
-                    )
+                return await interaction.response.send_message(
+                    "❌ **Kategorie '🆘 | PODPORA | 🆘' nebyla nalezena! Kontaktuj administrátora.**",
+                    ephemeral=True
+                )
             
             # Vytvoření ticket kanálu
             channel_name = f"ticket-{interaction.user.name.lower()}-{interaction.user.discriminator}"
@@ -273,7 +266,7 @@ class Tickets(commands.Cog):
             embed.add_field(
                 name="📈 Aktuální stav",
                 value=f"**Otevřené tikety:** {len(ticket_channels)}\n"
-                      f"**Ticket kategorie:** {self.bot.config['tickets']['category_name']}\n"
+                      f"**Ticket kategorie:** 🆘 | PODPORA | 🆘\n"
                       f"**Support role:** {self.bot.config['tickets']['support_role']}",
                 inline=True
             )
