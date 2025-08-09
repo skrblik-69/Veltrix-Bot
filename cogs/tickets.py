@@ -17,12 +17,16 @@ class TicketView(discord.ui.View):
     @discord.ui.button(label='🆘Podpora🆘', style=discord.ButtonStyle.primary, custom_id='ticket_general')
     async def general_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self._create_ticket(interaction, 'obecny', '🆘Podpora🆘')
+        
+@discord.ui.button(label='🕴️A-Tým Apply🕴️', style=discord.ButtonStyle.primary, custom_id='ticket_ateam')
+    async def admin_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self._create_ticket(interaction, 'atapply', '🕴️A-Tým Apply🕴️')
     
-    @discord.ui.button(label='☠️CK☠️', style=discord.ButtonStyle.danger, custom_id='ticket_bug')
-    async def bug_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._create_ticket(interaction, 'bug', '')
+    @discord.ui.button(label='☠️CK☠️', style=discord.ButtonStyle.danger, custom_id='ticket_ck')
+    async def ck_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self._create_ticket(interaction, 'ck', '☠️CK☠️')
     
-    @discord.ui.button(label='💼Frakce💼', style=discord.ButtonStyle.success, custom_id='ticket_complaint')
+    @discord.ui.button(label='💼Frakce💼', style=discord.ButtonStyle.success, custom_id='ticket_frakce')
     async def frakce_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self._create_ticket(interaction, 'navr', '💼Frakce💼')
     
