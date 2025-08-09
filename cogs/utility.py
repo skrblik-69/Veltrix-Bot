@@ -13,6 +13,96 @@ class Utility(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     
+    @commands.Cog.listener()
+    async def on_member_join(self, member):
+        """Event při příchodu nového člena"""
+        try:
+            # Získání nastavení z databáze
+            settings = await self.bot.db.get_guild_settings(member.guild.id)
+            if not settings or not settings.get('welcome_channel'):
+                return
+            
+            welcome_channel = member.guild.get_channel(settings['welcome_channel'])
+            if not welcome_channel:
+                return
+            
+            # Vlastní welcome zpráva nebo výchozí
+            welcome_msg = settings.get('welcome_message', 
+                                     f"Vítej na serveru {member.guild.name}, {member.mention}! 🎉")
+            
+            # Vytvoření embed zprávy
+            embed = discord.Embed(
+                title="👋 Nový člen!",
+                description=welcome_msg.format(
+                    user=member.mention,
+                    username=member.name,
+                    server=member.guild.name,
+                    count=len(member.guild.members)
+                ),
+                color=0x2ecc71,
+                timestamp=datetime.utcnow()
+            )
+            
+            embed.set_thumbnail(url=member.display_avatar.url)
+            embed.add_field(
+                name="📊 Statistiky",
+                value=f"**Účet vytvořen:** <t:{int(member.created_at.timestamp())}:R>\n"
+                      f"**Člen číslo:** {len(member.guild.members)}",
+                inline=True
+            )
+            
+            embed.set_footer(text=f"ID: {member.id}")
+            
+            await welcome_channel.send(embed=embed)
+            
+        except Exception as e:
+            logger.error(f"Chyba v welcome systému: {e}")
+    
+    @commands.Cog.listener()
+    async def on_member_remove(self, member):
+        """Event při odchodu člena"""
+        try:
+            # Získání nastavení z databáze
+            settings = await self.bot.db.get_guild_settings(member.guild.id)
+            if not settings or not settings.get('goodbye_channel'):
+                return
+            
+            goodbye_channel = member.guild.get_channel(settings['goodbye_channel'])
+            if not goodbye_channel:
+                return
+            
+            # Vlastní goodbye zpráva nebo výchozí
+            goodbye_msg = settings.get('goodbye_message', 
+                                      f"{member.name} opustil server. 😢")
+            
+            # Vytvoření embed zprávy
+            embed = discord.Embed(
+                title="👋 Člen odešel",
+                description=goodbye_msg.format(
+                    user=member.name,
+                    username=member.name,
+                    server=member.guild.name,
+                    count=len(member.guild.members)
+                ),
+                color=0xe74c3c,
+                timestamp=datetime.utcnow()
+            )
+            
+            embed.set_thumbnail(url=member.display_avatar.url)
+            embed.add_field(
+                name="📊 Statistiky",
+                value=f"**Připojen:** <t:{int(member.joined_at.timestamp())}:R>\n"
+                      f"**Zbývá členů:** {len(member.guild.members)}",
+                inline=True
+            )
+            
+            embed.set_footer(text=f"ID: {member.id}")
+            
+            await goodbye_channel.send(embed=embed)
+            
+        except Exception as e:
+            logger.error(f"Chyba v goodbye systému: {e}")
+    
     @commands.hybrid_command(name='serverinfo', aliases=['server'])
     async def server_info(self, ctx):
         """Zobrazí informace o serveru"""
@@ -410,13 +500,17 @@ class Utility(commands.Cog):
             # Aktuální nastavení
             prefix = settings.get('prefix', '!') if settings else '!'
             mod_channel = ctx.guild.get_channel(settings.get('mod_log_channel')) if settings and settings.get('mod_log_channel') else None
+            welcome_channel = ctx.guild.get_channel(settings.get('welcome_channel')) if settings and settings.get('welcome_channel') else None
+            goodbye_channel = ctx.guild.get_channel(settings.get('goodbye_channel')) if settings and settings.get('goodbye_channel') else None
             automod = settings.get('automod_enabled', True) if settings else True
             
             embed.add_field(
                 name="🎯 Aktuální nastavení",
                 value=f"**Prefix:** `{prefix}`\n"
                       f"**Mod log kanál:** {mod_channel.mention if mod_channel else 'Nenastaveno'}\n"
-                      f"**Auto-moderace:** {'🟢 Zapnuto' if automod else '🔴 Vypnuto'}",
+                      f"**Auto-moderace:** {'🟢 Zapnuto' if automod else '🔴 Vypnuto'}\n"
+                      f"**Welcome kanál:** {welcome_channel.mention if welcome_channel else 'Nenastaveno'}\n"
+                      f"**Goodbye kanál:** {goodbye_channel.mention if goodbye_channel else 'Nenastaveno'}",
                 inline=False
             )
             
@@ -424,7 +518,11 @@ class Utility(commands.Cog):
                 name="📋 Dostupná nastavení",
                 value="`prefix <nový_prefix>` - Změna prefixu\n"
                       "`mod_log <#kanál>` - Nastavení mod log kanálu\n"
-                      "`automod <true/false>` - Zapnutí/vypnutí auto-moderace",
+                      "`automod <true/false>` - Zapnutí/vypnutí auto-moderace\n"
+                      "`welcome <#kanál>` - Nastavení welcome kanálu\n"
+                      "`goodbye <#kanál>` - Nastavení goodbye kanálu\n"
+                      "`welcome_msg <zpráva>` - Vlastní welcome zpráva\n"
+                      "`goodbye_msg <zpráva>` - Vlastní goodbye zpráva",
                 inline=False
             )
             
@@ -464,6 +562,50 @@ class Utility(commands.Cog):
                 await ctx.send("✅ **Auto-moderace byla vypnuta!**")
             else:
                 await ctx.send("❌ **Neplatná hodnota! Použij: true/false**")
+                
+        elif nastavení.lower() in ['welcome', 'příchod']:
+            if not hodnota:
+                return await ctx.send("❌ **Musíš zadat kanál!**")
+            
+            try:
+                channel = await commands.TextChannelConverter().convert(ctx, hodnota)
+                await self.bot.db.update_guild_setting(ctx.guild.id, 'welcome_channel', channel.id)
+                await ctx.send(f"✅ **Welcome kanál byl nastaven na:** {channel.mention}")
+            except commands.ChannelNotFound:
+                await ctx.send("❌ **Kanál nebyl nalezen!**")
+                
+        elif nastavení.lower() in ['goodbye', 'odchod']:
+            if not hodnota:
+                return await ctx.send("❌ **Musíš zadat kanál!**")
+            
+            try:
+                channel = await commands.TextChannelConverter().convert(ctx, hodnota)
+                await self.bot.db.update_guild_setting(ctx.guild.id, 'goodbye_channel', channel.id)
+                await ctx.send(f"✅ **Goodbye kanál byl nastaven na:** {channel.mention}")
+            except commands.ChannelNotFound:
+                await ctx.send("❌ **Kanál nebyl nalezen!**")
+                
+        elif nastavení.lower() in ['welcome_msg', 'příchod_zpráva']:
+            if not hodnota:
+                return await ctx.send("❌ **Musíš zadat zprávu!**")
+            
+            await self.bot.db.update_guild_setting(ctx.guild.id, 'welcome_message', hodnota)
+            await ctx.send(f"✅ **Welcome zpráva byla nastavena!**\n\n**Dostupné proměnné:**\n"
+                          "`{user}` - mention uživatele\n"
+                          "`{username}` - jméno uživatele\n"
+                          "`{server}` - název serveru\n"
+                          "`{count}` - počet členů")
+            
+        elif nastavení.lower() in ['goodbye_msg', 'odchod_zpráva']:
+            if not hodnota:
+                return await ctx.send("❌ **Musíš zadat zprávu!**")
+            
+            await self.bot.db.update_guild_setting(ctx.guild.id, 'goodbye_message', hodnota)
+            await ctx.send(f"✅ **Goodbye zpráva byla nastavena!**\n\n**Dostupné proměnné:**\n"
+                          "`{user}` - jméno uživatele\n"
+                          "`{username}` - jméno uživatele\n"
+                          "`{server}` - název serveru\n"
+                          "`{count}` - počet členů")
         else:
             await ctx.send("❌ **Neplatné nastavení! Použij `!nastavení` pro zobrazení dostupných možností.**")
 

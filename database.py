@@ -81,7 +81,9 @@ class Database:
                 mute_role INTEGER,
                 automod_enabled INTEGER DEFAULT 1,
                 welcome_channel INTEGER,
+                goodbye_channel INTEGER,
                 welcome_message TEXT,
+                goodbye_message TEXT,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """,
