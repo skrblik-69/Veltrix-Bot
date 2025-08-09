@@ -14,21 +14,21 @@ class TicketView(discord.ui.View):
         super().__init__(timeout=None)
         self.bot = bot
     
-    @discord.ui.button(label='📋 Obecný dotaz', style=discord.ButtonStyle.primary, custom_id='ticket_general')
+    @discord.ui.button(label='🆘Podpora🆘', style=discord.ButtonStyle.primary, custom_id='ticket_general')
     async def general_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._create_ticket(interaction, 'obecny', '📋 Obecný dotaz')
+        await self._create_ticket(interaction, 'obecny', '🆘Podpora🆘')
     
-    @discord.ui.button(label='🐛 Bug report', style=discord.ButtonStyle.danger, custom_id='ticket_bug')
+    @discord.ui.button(label='☠️CK☠️', style=discord.ButtonStyle.danger, custom_id='ticket_bug')
     async def bug_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._create_ticket(interaction, 'bug', '🐛 Bug report')
+        await self._create_ticket(interaction, 'bug', '')
     
-    @discord.ui.button(label='💡 Návrh', style=discord.ButtonStyle.success, custom_id='ticket_suggestion')
-    async def suggestion_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._create_ticket(interaction, 'navrh', '💡 Návrh')
+    @discord.ui.button(label='💼Frakce💼', style=discord.ButtonStyle.success, custom_id='ticket_complaint')
+    async def frakce_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self._create_ticket(interaction, 'navr', '💼Frakce💼')
     
-    @discord.ui.button(label='⚠️ Stížnost', style=discord.ButtonStyle.secondary, custom_id='ticket_complaint')
+    @discord.ui.button(label='😾Stížnost😾', style=discord.ButtonStyle.secondary, custom_id='ticket_complaintstaff')
     async def complaint_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self._create_ticket(interaction, 'stiznost', '⚠️ Stížnost')
+        await self._create_ticket(interaction, 'stiznost', '😾Stížnost😾')
     
     async def _create_ticket(self, interaction: discord.Interaction, category: str, category_name: str):
         """Vytvoří nový ticket"""
