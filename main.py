@@ -133,7 +133,7 @@ async def help_command(ctx, kategorie=None):
             inline=False
         )
     
-    embed.set_footer(text="TrueBlue APP | Vytvořeno s ❤️")
+    embed.set_footer(text="TrueBlue APP | Made by Skrblík")
     await ctx.send(embed=embed)
 
 async def main():
@@ -142,7 +142,7 @@ async def main():
     bot.add_command(help_command)
     
     # Získání Discord tokenu z environment proměnných
-    token = os.getenv('DISCORD_TOKEN')
+    token = os.getenv("MTQwMzQ2MTczNTY0MTM4NzA4OA.Gy1Moe.7piE4zvV18f2Atm0KrYY99cQxd_Y9joIR84s2k")
     if not token:
         logger.error("DISCORD_TOKEN nebyl nalezen v environment proměnných!")
         return

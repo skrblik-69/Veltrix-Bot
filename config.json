@@ -1,8 +1,8 @@
 {
     "prefix": "!",
     "embed_color": 3447003,
-    "currency_name": "kredity",
-    "currency_symbol": "💎",
+    "currency_name": "dollary",
+    "currency_symbol": "💵",
     "daily_amount": 100,
     "work_min": 50,
     "work_max": 200,
@@ -27,7 +27,7 @@
     },
     "tickets": {
         "category_name": "🎫 Support Tikety",
-        "support_role": "Support"
+        "support_role": "Majitel, Admin, Technik,Sp. Majitel, Hl. Admin, Senior Admin"
     },
     "moderation": {
         "mute_role": "Ztišen",
