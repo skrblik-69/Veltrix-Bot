@@ -13,12 +13,11 @@ class TicketView(discord.ui.View):
     def __init__(self, bot):
         super().__init__(timeout=None)
         self.bot = bot
-    
-    @discord.ui.button(label='🆘Podpora🆘', style=discord.ButtonStyle.primary, custom_id='ticket_general')
+        @discord.ui.button(label='🆘Podpora🆘', style=discord.ButtonStyle.primary, custom_id='ticket_general')
     async def general_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self._create_ticket(interaction, 'obecny', '🆘Podpora🆘')
         
-@discord.ui.button(label='🕴️A-Tým Apply🕴️', style=discord.ButtonStyle.primary, custom_id='ticket_ateam')
+    @discord.ui.button(label='🕴️A-Tým Apply🕴️', style=discord.ButtonStyle.primary, custom_id='ticket_ateam')
     async def admin_ticket(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self._create_ticket(interaction, 'atapply', '🕴️A-Tým Apply🕴️')
     
