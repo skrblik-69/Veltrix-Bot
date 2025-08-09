@@ -142,7 +142,7 @@ async def main():
     bot.add_command(help_command)
     
     # Získání Discord tokenu z environment proměnných
-    token = os.getenv("MTQwMzQ2MTczNTY0MTM4NzA4OA.Gy1Moe.7piE4zvV18f2Atm0KrYY99cQxd_Y9joIR84s2k")
+    token = os.getenv("DISCORD_TOKEN")
     if not token:
         logger.error("DISCORD_TOKEN nebyl nalezen v environment proměnných!")
         return
