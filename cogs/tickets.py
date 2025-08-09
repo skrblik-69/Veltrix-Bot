@@ -79,12 +79,17 @@ class TicketView(discord.ui.View):
                 )
             }
             
-            # Přidání support role pokud existuje
-            support_role = discord.utils.get(guild.roles, name=self.bot.config['tickets']['support_role'])
-            if support_role:
-                overwrites[support_role] = discord.PermissionOverwrite(
-                    read_messages=True, send_messages=True
-                )
+            # Přidání support rolí pokud existují
+            support_roles = []
+            role_names = [name.strip() for name in self.bot.config['tickets']['support_role'].split(',')]
+            
+            for role_name in role_names:
+                role = discord.utils.get(guild.roles, name=role_name)
+                if role:
+                    support_roles.append(role)
+                    overwrites[role] = discord.PermissionOverwrite(
+                        read_messages=True, send_messages=True
+                    )
             
             ticket_channel = await guild.create_text_channel(
                 channel_name,
@@ -113,8 +118,11 @@ class TicketView(discord.ui.View):
             )
             embed.set_footer(text=f"Ticket ID: {ticket_channel.id}")
             
+            # Vytvoření mention stringu pro všechny support role
+            support_mentions = " ".join([role.mention for role in support_roles]) if support_roles else ""
+            
             await ticket_channel.send(
-                content=f"{interaction.user.mention}" + (f" {support_role.mention}" if support_role else ""),
+                content=f"{interaction.user.mention}" + (f" {support_mentions}" if support_mentions else ""),
                 embed=embed,
                 view=close_view
             )
