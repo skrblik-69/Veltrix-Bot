@@ -1,36 +1,49 @@
 {
     "prefix": "!",
     "embed_color": 3447003,
-    "currency_name": "dollary",
-    "currency_symbol": "💵",
-    "daily_amount": 100,
-    "work_min": 50,
-    "work_max": 200,
+    "owner_ids": ["YOUR_DISCORD_ID_1", "YOUR_DISCORD_ID_2"],
+    
     "automod": {
         "spam_threshold": 5,
         "spam_timeframe": 10,
-        "bad_words": [
-            "kurva",
-            "kokot",
-            "pičo",
-            "debil",
-            "idiot"
-        ],
+        "bad_words": [],
         "max_mentions": 5,
         "max_emojis": 10,
         "max_caps_percentage": 70
     },
+    
+    "tickets": {
+        "support_role_id": "SUPPORT_ROLE_ID",
+        "admin_role_id": "ADMIN_ROLE_ID",
+        "staff_role_id": "STAFF_ROLE_ID",
+        "auto_close_time": 86400,
+        "category_id": "CATEGORY_ID"
+    },
+    
     "music": {
         "max_queue_length": 50,
-        "max_duration": 3600,
-        "default_volume": 0.5
+        "default_volume": 50,
+        "max_volume": 150
     },
-    "tickets": {
-        "category_name": "🎫 Support Tikety",
-        "support_role": "Majitel, Admin, Technik,Sp. Majitel, Hl. Admin, Senior Admin"
+    
+    "economy": {
+        "starting_balance": 1000,
+        "daily_reward": 100,
+        "work_cooldown": 3600
     },
-    "moderation": {
-        "mute_role": "Ztišen",
-        "log_channel": "mod-log"
+    
+    "mdt": {
+        "mdt_server_id": "MDT_SERVER_ID",
+        "main_server_id": "MAIN_SERVER_ID",
+        "alphabet_categories": true,
+        "citizen_role_id": "CITIZEN_ROLE_ID",
+        "police_role_id": "POLICE_ROLE_ID",
+        "admin_role_id": "ADMIN_ROLE_ID"
+    },
+    
+    "welcome": {
+        "enabled": true,
+        "channel_id": "WELCOME_CHANNEL_ID",
+        "goodbye_channel_id": "GOODBYE_CHANNEL_ID"
     }
 }

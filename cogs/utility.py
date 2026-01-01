@@ -1,128 +1,85 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 from datetime import datetime, timedelta
 import asyncio
 import json
 import logging
+import random
+import re
 
 logger = logging.getLogger(__name__)
 
 class Utility(commands.Cog):
-    """Užitečné nástroje pro správu serveru"""
+    """Užitečné nástroje a příkazy"""
     
     def __init__(self, bot):
         self.bot = bot
+        self.reminders = {}
     
-    @commands.Cog.listener()
-    async def on_member_join(self, member):
-        """Event při příchodu nového člena"""
-        try:
-            # Získání nastavení z databáze
-            settings = await self.bot.db.get_guild_settings(member.guild.id)
-            if not settings or not settings.get('welcome_channel'):
-                return
-            
-            welcome_channel = member.guild.get_channel(settings['welcome_channel'])
-            if not welcome_channel:
-                return
-            
-            # Vlastní welcome zpráva nebo výchozí
-            welcome_msg = settings.get('welcome_message', 
-                                     f"Vítej na serveru {member.guild.name}, {member.mention}! 🎉")
-            
-            # Vytvoření embed zprávy
-            embed = discord.Embed(
-                title="👋 Nový člen!",
-                description=welcome_msg.format(
-                    user=member.mention,
-                    username=member.name,
-                    server=member.guild.name,
-                    count=len(member.guild.members)
-                ),
-                color=0x2ecc71,
-                timestamp=datetime.utcnow()
-            )
-            
-            embed.set_thumbnail(url=member.display_avatar.url)
-            embed.add_field(
-                name="📊 Statistiky",
-                value=f"**Účet vytvořen:** <t:{int(member.created_at.timestamp())}:R>\n"
-                      f"**Člen číslo:** {len(member.guild.members)}",
-                inline=True
-            )
-            
-            embed.set_footer(text=f"ID: {member.id}")
-            
-            await welcome_channel.send(embed=embed)
-            
-        except Exception as e:
-            logger.error(f"Chyba v welcome systému: {e}")
-    
-    @commands.Cog.listener()
-    async def on_member_remove(self, member):
-        """Event při odchodu člena"""
-        try:
-            # Získání nastavení z databáze
-            settings = await self.bot.db.get_guild_settings(member.guild.id)
-            if not settings or not settings.get('goodbye_channel'):
-                return
-            
-            goodbye_channel = member.guild.get_channel(settings['goodbye_channel'])
-            if not goodbye_channel:
-                return
-            
-            # Vlastní goodbye zpráva nebo výchozí
-            goodbye_msg = settings.get('goodbye_message', 
-                                      f"{member.name} opustil server. 😢")
-            
-            # Vytvoření embed zprávy
-            embed = discord.Embed(
-                title="👋 Člen odešel",
-                description=goodbye_msg.format(
-                    user=member.name,
-                    username=member.name,
-                    server=member.guild.name,
-                    count=len(member.guild.members)
-                ),
-                color=0xe74c3c,
-                timestamp=datetime.utcnow()
-            )
-            
-            embed.set_thumbnail(url=member.display_avatar.url)
-            embed.add_field(
-                name="📊 Statistiky",
-                value=f"**Připojen:** <t:{int(member.joined_at.timestamp())}:R>\n"
-                      f"**Zbývá členů:** {len(member.guild.members)}",
-                inline=True
-            )
-            
-            embed.set_footer(text=f"ID: {member.id}")
-            
-            await goodbye_channel.send(embed=embed)
-            
-        except Exception as e:
-            logger.error(f"Chyba v goodbye systému: {e}")
-    
-    @commands.hybrid_command(name='serverinfo', aliases=['server'])
-    async def server_info(self, ctx):
-        """Zobrazí informace o serveru"""
-        guild = ctx.guild
+    # ========== PING ==========
+    @app_commands.command(name="ping", description="Zobrazí ping bota")
+    async def ping_slash(self, interaction: discord.Interaction):
+        """Zobrazí ping bota"""
+        start = datetime.utcnow()
         
         embed = discord.Embed(
-            title=f"📊 Informace o serveru",
+            title="🏓 Měření ping...",
+            color=0x3498db
+        )
+        
+        await interaction.response.send_message(embed=embed)
+        
+        end = datetime.utcnow()
+        api_ping = round(self.bot.latency * 1000, 2)
+        message_ping = round((end - start).total_seconds() * 1000, 2)
+        
+        embed = discord.Embed(
+            title="🏓 Pong!",
+            color=0x2ecc71,
+            timestamp=datetime.utcnow()
+        )
+        
+        embed.add_field(name="⚡ API Ping", value=f"**{api_ping}ms**", inline=True)
+        embed.add_field(name="💬 Message Ping", value=f"**{message_ping}ms**", inline=True)
+        
+        # Kvalita spojení
+        if api_ping < 100:
+            quality = "🟢 Výborné"
+        elif api_ping < 200:
+            quality = "🟡 Dobré"
+        elif api_ping < 500:
+            quality = "🟠 Průměrné"
+        else:
+            quality = "🔴 Špatné"
+        
+        embed.add_field(name="📊 Kvalita", value=quality, inline=True)
+        
+        await interaction.edit_original_response(embed=embed)
+    
+    # ========== SERVER INFO ==========
+    @app_commands.command(name="serverinfo", description="Zobrazí informace o serveru")
+    async def serverinfo_slash(self, interaction: discord.Interaction):
+        """Zobrazí informace o serveru"""
+        guild = interaction.guild
+        
+        # Vytvoření embedu
+        embed = discord.Embed(
+            title=f"📊 {guild.name}",
             color=0x3498db,
             timestamp=datetime.utcnow()
         )
         
-        embed.set_thumbnail(url=guild.icon.url if guild.icon else None)
+        if guild.icon:
+            embed.set_thumbnail(url=guild.icon.url)
         
         # Základní informace
         embed.add_field(
-            name="🏷️ Základní info",
-            value=f"**Název:** {guild.name}\n"
-                  f"**ID:** {guild.id}\n"
-                  f"**Vlastník:** {guild.owner.mention if guild.owner else 'Neznámý'}\n"
-                  f"**Vytvořen:** <t:{int(guild.created_at.timestamp())}:R>",
+            name="🏷️ Informace",
+            value=f"**Vlastník:** {guild.owner.mention if guild.owner else 'Neznámý'}\n"
+                  f"**ID:** `{guild.id}`\n"
+                  f"**Vytvořen:** <t:{int(guild.created_at.timestamp())}:D>\n"
+                  f"**Boost level:** {guild.premium_tier}",
             inline=True
         )
         
@@ -145,7 +102,7 @@ class Utility(commands.Cog):
         categories = len(guild.categories)
         
         embed.add_field(
-            name="📺 Kanály a role",
+            name="📺 Kanály",
             value=f"**Textové:** {text_channels}\n"
                   f"**Hlasové:** {voice_channels}\n"
                   f"**Kategorie:** {categories}\n"
@@ -153,14 +110,52 @@ class Utility(commands.Cog):
             inline=True
         )
         
+        # Boosty
+        if guild.premium_subscription_count > 0:
+            embed.add_field(
+                name="✨ Boosty",
+                value=f"**Počet:** {guild.premium_subscription_count}\n"
+                      f"**Boostéři:** {len(guild.premium_subscribers)}\n"
+                      f"**Level:** {guild.premium_tier}",
+                inline=True
+            )
+        
+        # Emoji a stickery
+        embed.add_field(
+            name="🎨 Emoji & Stickery",
+            value=f"**Emoji:** {len(guild.emojis)}/{guild.emoji_limit}\n"
+                  f"**Stickery:** {len(guild.stickers)}/{guild.sticker_limit}",
+            inline=True
+        )
+        
         # Funkce serveru
         features = []
-        if guild.premium_tier > 0:
-            features.append(f"Nitro Boost Level {guild.premium_tier}")
-        if guild.verification_level != discord.VerificationLevel.none:
-            features.append(f"Ověření: {guild.verification_level.name.title()}")
-        if guild.explicit_content_filter != discord.ContentFilter.disabled:
-            features.append("Filtr obsahu aktivní")
+        if guild.features:
+            feature_names = {
+                'ANIMATED_ICON': 'Animated Icon',
+                'BANNER': 'Banner',
+                'COMMERCE': 'Commerce',
+                'COMMUNITY': 'Community',
+                'DISCOVERABLE': 'Discoverable',
+                'FEATURABLE': 'Featurable',
+                'INVITE_SPLASH': 'Invite Splash',
+                'MEMBER_VERIFICATION_GATE_ENABLED': 'Verification Gate',
+                'MONETIZATION_ENABLED': 'Monetization',
+                'MORE_STICKERS': 'More Stickers',
+                'NEWS': 'News Channels',
+                'PARTNERED': 'Partnered',
+                'PREVIEW_ENABLED': 'Preview',
+                'PRIVATE_THREADS': 'Private Threads',
+                'ROLE_ICONS': 'Role Icons',
+                'TICKETED_EVENTS': 'Ticketed Events',
+                'VANITY_URL': 'Vanity URL',
+                'VERIFIED': 'Verified',
+                'VIP_REGIONS': 'VIP Regions',
+                'WELCOME_SCREEN_ENABLED': 'Welcome Screen'
+            }
+            
+            for feature in guild.features[:5]:
+                features.append(f"✓ {feature_names.get(feature, feature)}")
         
         if features:
             embed.add_field(
@@ -169,13 +164,16 @@ class Utility(commands.Cog):
                 inline=False
             )
         
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
     
-    @commands.hybrid_command(name='userinfo', aliases=['user'])
-    async def user_info(self, ctx, uživatel: discord.Member = None):
+    # ========== USER INFO ==========
+    @app_commands.command(name="userinfo", description="Zobrazí informace o uživateli")
+    @app_commands.describe(uživatel="Uživatel (nechte prázdné pro sebe)")
+    async def userinfo_slash(self, interaction: discord.Interaction, uživatel: discord.Member = None):
         """Zobrazí informace o uživateli"""
-        user = uživatel or ctx.author
+        user = uživatel or interaction.user
         
+        # Vytvoření embedu
         embed = discord.Embed(
             title=f"👤 {user.display_name}",
             color=user.color if user.color != discord.Color.default() else 0x3498db,
@@ -186,19 +184,20 @@ class Utility(commands.Cog):
         
         # Základní informace
         embed.add_field(
-            name="🏷️ Základní info",
-            value=f"**Uživatelské jméno:** {user}\n"
-                  f"**ID:** {user.id}\n"
-                  f"**Přezdívka:** {user.nick or 'Žádná'}\n"
-                  f"**Bot:** {'✅ Ano' if user.bot else '❌ Ne'}",
+            name="🏷️ Účet",
+            value=f"**Jméno:** {user}\n"
+                  f"**ID:** `{user.id}`\n"
+                  f"**Bot:** {'✅ Ano' if user.bot else '❌ Ne'}\n"
+                  f"**Vytvořen:** <t:{int(user.created_at.timestamp())}:R>",
             inline=True
         )
         
-        # Datumy
+        # Server informace
         embed.add_field(
-            name="📅 Datumy",
-            value=f"**Vytvořen:** <t:{int(user.created_at.timestamp())}:R>\n"
-                  f"**Připojen:** <t:{int(user.joined_at.timestamp())}:R>",
+            name="📅 Server",
+            value=f"**Přezdívka:** {user.nick or 'Žádná'}\n"
+                  f"**Připojen:** <t:{int(user.joined_at.timestamp())}:R>\n"
+                  f"**Nejvyšší role:** {user.top_role.mention}",
             inline=True
         )
         
@@ -212,64 +211,55 @@ class Utility(commands.Cog):
         
         activity_text = "Žádná"
         if user.activities:
-            activity = user.activities[0]
-            if isinstance(activity, discord.Game):
-                activity_text = f"🎮 Hraje {activity.name}"
-            elif isinstance(activity, discord.Streaming):
-                activity_text = f"📺 Streamuje {activity.name}"
-            elif isinstance(activity, discord.Activity):
-                activity_text = f"🎯 {activity.name}"
+            for activity in user.activities:
+                if isinstance(activity, discord.Game):
+                    activity_text = f"🎮 Hraje {activity.name}"
+                    break
+                elif isinstance(activity, discord.Streaming):
+                    activity_text = f"📺 Streamuje {activity.name}"
+                    break
+                elif isinstance(activity, discord.Activity):
+                    if activity.type == discord.ActivityType.listening:
+                        activity_text = f"🎵 Poslouchá {activity.name}"
+                    elif activity.type == discord.ActivityType.watching:
+                        activity_text = f"📺 Sleduje {activity.name}"
+                    else:
+                        activity_text = f"🎯 {activity.name}"
+                    break
+                elif isinstance(activity, discord.CustomActivity):
+                    activity_text = f"💭 {activity.name}"
+                    break
         
         embed.add_field(
-            name="💫 Status",
-            value=f"**Status:** {status_emoji.get(user.status, '❓ Neznámý')}\n"
+            name="💫 Stav",
+            value=f"**Status:** {status_emoji.get(user.status, '❓')}\n"
                   f"**Aktivita:** {activity_text}",
             inline=True
         )
         
-        # Role (pouze top 10)
-        roles = [role.mention for role in user.roles[1:] if role != ctx.guild.default_role]
+        # Role (max 10)
+        roles = [role.mention for role in user.roles[1:] if role != interaction.guild.default_role]
         if roles:
             roles_text = ", ".join(roles[:10])
             if len(roles) > 10:
-                roles_text += f" a dalších {len(roles) - 10}"
+                roles_text += f" (+{len(roles) - 10})"
         else:
             roles_text = "Žádné role"
         
         embed.add_field(
             name=f"🎭 Role ({len(user.roles) - 1})",
-            value=roles_text,
+            value=roles_text[:1024],
             inline=False
         )
         
-        # Oprávnění (pouze admin a moderační)
-        perms = []
-        if user.guild_permissions.administrator:
-            perms.append("👑 Administrator")
-        if user.guild_permissions.manage_guild:
-            perms.append("⚙️ Správa serveru")
-        if user.guild_permissions.manage_channels:
-            perms.append("📺 Správa kanálů")
-        if user.guild_permissions.manage_messages:
-            perms.append("💬 Správa zpráv")
-        if user.guild_permissions.kick_members:
-            perms.append("🦶 Vykopávání")
-        if user.guild_permissions.ban_members:
-            perms.append("🔨 Banování")
-        
-        if perms:
-            embed.add_field(
-                name="🛡️ Klíčová oprávnění",
-                value="\n".join(perms[:5]),
-                inline=True
-            )
-        
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
     
-    @commands.hybrid_command(name='avatar', aliases=['av'])
-    async def avatar(self, ctx, uživatel: discord.Member = None):
+    # ========== AVATAR ==========
+    @app_commands.command(name="avatar", description="Zobrazí avatar uživatele")
+    @app_commands.describe(uživatel="Uživatel (nechte prázdné pro sebe)")
+    async def avatar_slash(self, interaction: discord.Interaction, uživatel: discord.Member = None):
         """Zobrazí avatar uživatele"""
-        user = uživatel or ctx.author
+        user = uživatel or interaction.user
         
         embed = discord.Embed(
             title=f"🖼️ Avatar uživatele {user.display_name}",
@@ -278,112 +268,84 @@ class Utility(commands.Cog):
         
         embed.set_image(url=user.display_avatar.url)
         
-        embed.add_field(
-            name="🔗 Odkazy",
-            value=f"[PNG]({user.display_avatar.with_format('png').url}) | "
-                  f"[JPG]({user.display_avatar.with_format('jpg').url}) | "
-                  f"[WEBP]({user.display_avatar.with_format('webp').url})",
-            inline=False
-        )
+        # Formáty avataru
+        formats = ['png', 'jpg', 'webp']
+        if user.display_avatar.is_animated():
+            formats.append('gif')
         
-        await ctx.send(embed=embed)
+        links = " | ".join(f"[{fmt.upper()}]({user.display_avatar.with_format(fmt).url})" for fmt in formats)
+        
+        embed.add_field(name="🔗 Stáhnout", value=links, inline=False)
+        embed.set_footer(text=f"ID: {user.id}")
+        
+        await interaction.response.send_message(embed=embed)
     
-    @commands.hybrid_command(name='ping')
-    async def ping(self, ctx):
-        """Zobrazí ping bota"""
-        start_time = datetime.utcnow()
-        message = await ctx.send("🏓 Pinguji...")
-        end_time = datetime.utcnow()
+    # ========== SAY ==========
+    @app_commands.command(name="say", description="Pošle zprávu jako bot")
+    @app_commands.default_permissions(manage_messages=True)
+    @app_commands.describe(zpráva="Zpráva k odeslání")
+    async def say_slash(self, interaction: discord.Interaction, zpráva: str):
+        """Pošle zprávu jako bot"""
+        await interaction.response.defer(ephemeral=True)
         
-        api_ping = round(self.bot.latency * 1000, 2)
-        message_ping = round((end_time - start_time).total_seconds() * 1000, 2)
-        
-        embed = discord.Embed(
-            title="🏓 Pong!",
-            color=0x2ecc71,
-            timestamp=datetime.utcnow()
-        )
-        
-        embed.add_field(
-            name="⚡ API Ping",
-            value=f"**{api_ping}ms**",
-            inline=True
-        )
-        
-        embed.add_field(
-            name="💬 Message Ping",
-            value=f"**{message_ping}ms**",
-            inline=True
-        )
-        
-        # Určení kvality spojení
-        if api_ping < 100:
-            quality = "🟢 Výborné"
-        elif api_ping < 200:
-            quality = "🟡 Dobré"
-        elif api_ping < 500:
-            quality = "🟠 Slabé"
-        else:
-            quality = "🔴 Velmi špatné"
-        
-        embed.add_field(
-            name="📊 Kvalita spojení",
-            value=quality,
-            inline=True
-        )
-        
-        await message.edit(content=None, embed=embed)
-    
-    @commands.hybrid_command(name='say', aliases=['echo'])
-    @commands.has_permissions(manage_messages=True)
-    async def say(self, ctx, *, zpráva: str):
-        """Nechá bota napsat zprávu"""
         try:
-            await ctx.message.delete()
-        except:
-            pass
-        
-        await ctx.send(zpráva)
+            # Smazat příkaz
+            await interaction.delete_original_response()
+            
+            # Odeslat zprávu
+            await interaction.channel.send(zpráva)
+            
+        except Exception as e:
+            logger.error(f"Chyba v say příkazu: {e}")
+            await interaction.followup.send("❌ **Nastala chyba při odesílání zprávy!**", ephemeral=True)
     
-    @commands.hybrid_command(name='embed')
-    @commands.has_permissions(manage_messages=True)
-    async def create_embed(self, ctx, titulek: str, *, obsah: str):
+    # ========== EMBED ==========
+    @app_commands.command(name="embed", description="Vytvoří embed zprávu")
+    @app_commands.default_permissions(manage_messages=True)
+    @app_commands.describe(titulek="Titulek embedu", popis="Popis embedu", barva="Barva v hex (např. #3498db)")
+    async def embed_slash(self, interaction: discord.Interaction, titulek: str, popis: str, barva: str = None):
         """Vytvoří embed zprávu"""
+        await interaction.response.defer(ephemeral=True)
+        
         try:
-            await ctx.message.delete()
-        except:
-            pass
-        
-        embed = discord.Embed(
-            title=titulek,
-            description=obsah,
-            color=self.bot.config['embed_color'],
-            timestamp=datetime.utcnow()
-        )
-        
-        embed.set_footer(text=f"Vytvořeno uživatelem {ctx.author.display_name}")
-        
-        await ctx.send(embed=embed)
+            # Parsování barvy
+            color = 0x3498db  # Výchozí
+            if barva:
+                try:
+                    if barva.startswith('#'):
+                        barva = barva[1:]
+                    color = int(barva, 16)
+                except:
+                    color = 0x3498db
+            
+            # Vytvoření embedu
+            embed = discord.Embed(
+                title=titulek,
+                description=popis,
+                color=color,
+                timestamp=datetime.utcnow()
+            )
+            
+            embed.set_footer(text=f"Vytvořil {interaction.user.display_name}", icon_url=interaction.user.display_avatar.url)
+            
+            # Smazat příkaz
+            await interaction.delete_original_response()
+            
+            # Odeslat embed
+            await interaction.channel.send(embed=embed)
+            
+        except Exception as e:
+            logger.error(f"Chyba v embed příkazu: {e}")
+            await interaction.followup.send("❌ **Nastala chyba při vytváření embedu!**", ephemeral=True)
     
-    @commands.hybrid_command(name='poll', aliases=['hlasování'])
-    async def poll(self, ctx, *, argumenty: str):
-        """Vytvoří hlasování - použij: !poll "Otázka?" "Možnost 1" "Možnost 2" """
-        import shlex
+    # ========== POLL ==========
+    @app_commands.command(name="hlasování", description="Vytvoří hlasování")
+    @app_commands.describe(otázka="Otázka pro hlasování", možnost1="První možnost", možnost2="Druhá možnost")
+    async def poll_slash(self, interaction: discord.Interaction, otázka: str, možnost1: str, možnost2: str):
+        """Vytvoří hlasování"""
+        await interaction.response.defer()
         
-        try:
-            # Parsování argumentů v uvozovkách
-            parts = shlex.split(argumenty)
-        except ValueError:
-            return await ctx.send("❌ **Použij uvozovky kolem otázky a možností!** Příklad: `!poll \"Otázka?\" \"Možnost 1\" \"Možnost 2\"`")
-        
-        if len(parts) < 3:
-            return await ctx.send("❌ **Musíš zadat otázku a alespoň 2 možnosti!** Příklad: `!poll \"Otázka?\" \"Možnost 1\" \"Možnost 2\"`")
-        
-        otázka = parts[0]
-        možnosti = parts[1:]
-        
-        if len(možnosti) > 10:
-            return await ctx.send("❌ **Maximum je 10 možností!**")
+        reactions = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
         
         embed = discord.Embed(
             title="📊 Hlasování",
@@ -392,223 +354,394 @@ class Utility(commands.Cog):
             timestamp=datetime.utcnow()
         )
         
-        reactions = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
+        embed.add_field(name="1️⃣", value=možnost1, inline=False)
+        embed.add_field(name="2️⃣", value=možnost2, inline=False)
         
-        možnosti_text = ""
-        for i, možnost in enumerate(možnosti):
-            možnosti_text += f"{reactions[i]} {možnost}\n"
+        embed.set_footer(text=f"Vytvořil {interaction.user.display_name}")
         
-        embed.add_field(
-            name="Možnosti:",
-            value=možnosti_text,
-            inline=False
-        )
-        
-        embed.set_footer(text=f"Hlasování spustil {ctx.author.display_name}")
-        
-        try:
-            await ctx.message.delete()
-        except:
-            pass
-        
-        poll_msg = await ctx.send(embed=embed)
+        message = await interaction.followup.send(embed=embed)
         
         # Přidání reakcí
-        for i in range(len(možnosti)):
-            await poll_msg.add_reaction(reactions[i])
+        await message.add_reaction('1️⃣')
+        await message.add_reaction('2️⃣')
     
-    @commands.hybrid_command(name='remind', aliases=['připomeň'])
-    async def remind(self, ctx, čas: str, *, připomínka: str):
-        """Připomene ti něco za určitý čas"""
+    # ========== REMIND ==========
+    @app_commands.command(name="připomeň", description="Nastaví připomínku")
+    @app_commands.describe(čas="Čas (např. 10m, 1h, 2d30m)", zpráva="Zpráva připomínky")
+    async def remind_slash(self, interaction: discord.Interaction, čas: str, zpráva: str):
+        """Nastaví připomínku"""
+        await interaction.response.defer()
+        
         try:
             # Parsování času
             time_units = {
                 's': 1, 'sec': 1, 'sekund': 1,
                 'm': 60, 'min': 60, 'minut': 60,
-                'h': 3600, 'hour': 3600, 'hodin': 3600,
-                'd': 86400, 'day': 86400, 'den': 86400, 'dní': 86400
+                'h': 3600, 'hod': 3600, 'hodin': 3600,
+                'd': 86400, 'den': 86400, 'dní': 86400
             }
             
             total_seconds = 0
-            čas = čas.lower()
-            
-            # Jednoduchý parser pro formáty typu "10m", "1h30m", "2d"
-            import re
-            time_pattern = r'(\d+)([smhd]|sec|min|hour|day|sekund|minut|hodin|den|dní)'
-            matches = re.findall(time_pattern, čas)
+            pattern = r'(\d+)\s*([a-zA-Záčďéěíňóřšťúůýž]+)'
+            matches = re.findall(pattern, čas.lower())
             
             if not matches:
-                return await ctx.send("❌ **Neplatný formát času! Použij např: 10m, 1h30m, 2d**")
+                await interaction.followup.send("❌ **Neplatný formát času!**\nPoužij např: `10m`, `1h30m`, `2d`", ephemeral=True)
+                return
             
             for amount, unit in matches:
                 if unit in time_units:
                     total_seconds += int(amount) * time_units[unit]
+                else:
+                    # Zkontrolovat zkrácené formy
+                    for key in time_units:
+                        if key.startswith(unit):
+                            total_seconds += int(amount) * time_units[key]
+                            break
             
             if total_seconds < 10:
-                return await ctx.send("❌ **Minimum je 10 sekund!**")
+                await interaction.followup.send("❌ **Minimální čas je 10 sekund!**", ephemeral=True)
+                return
             
             if total_seconds > 2592000:  # 30 dní
-                return await ctx.send("❌ **Maximum je 30 dní!**")
+                await interaction.followup.send("❌ **Maximální čas je 30 dní!**", ephemeral=True)
+                return
             
-            # Vytvoření embed zprávy
+            # Formátování času pro zobrazení
+            if total_seconds < 60:
+                display_time = f"{total_seconds} sekund"
+            elif total_seconds < 3600:
+                minutes = total_seconds // 60
+                display_time = f"{minutes} minut"
+            elif total_seconds < 86400:
+                hours = total_seconds // 3600
+                minutes = (total_seconds % 3600) // 60
+                display_time = f"{hours} hodin"
+                if minutes > 0:
+                    display_time += f" {minutes} minut"
+            else:
+                days = total_seconds // 86400
+                hours = (total_seconds % 86400) // 3600
+                display_time = f"{days} dní"
+                if hours > 0:
+                    display_time += f" {hours} hodin"
+            
+            # Uložení připomínky
+            reminder_id = f"{interaction.user.id}_{datetime.now().timestamp()}"
+            self.reminders[reminder_id] = {
+                'user_id': interaction.user.id,
+                'channel_id': interaction.channel.id,
+                'message': zpráva,
+                'ends_at': datetime.now() + timedelta(seconds=total_seconds),
+                'original_message': f"https://discord.com/channels/{interaction.guild.id}/{interaction.channel.id}/{interaction.id}"
+            }
+            
+            # Potvrzení
             embed = discord.Embed(
                 title="⏰ Připomínka nastavena",
-                description=f"**Připomenu ti za:** {čas}\n**Zpráva:** {připomínka}",
+                description=f"**Za:** {display_time}\n**Zpráva:** {zpráva}",
                 color=0x2ecc71,
                 timestamp=datetime.utcnow()
             )
             
-            await ctx.send(embed=embed)
+            embed.set_footer(text="Připomenu ti to v tomto kanálu")
             
-            # Čekání
+            await interaction.followup.send(embed=embed)
+            
+            # Spustit časovač
             await asyncio.sleep(total_seconds)
             
-            # Poslání připomínky
-            remind_embed = discord.Embed(
-                title="⏰ Připomínka!",
-                description=f"**Připomínka:** {připomínka}\n\n"
-                           f"[Přejdi na původní zprávu]({ctx.message.jump_url})",
+            # Odeslat připomínku
+            if reminder_id in self.reminders:
+                reminder = self.reminders.pop(reminder_id)
+                
+                embed = discord.Embed(
+                    title="⏰ Připomínka!",
+                    description=f"**{zpráva}**\n\n[Původní zpráva]({reminder['original_message']})",
+                    color=0xe74c3c,
+                    timestamp=datetime.utcnow()
+                )
+                
+                try:
+                    channel = self.bot.get_channel(reminder['channel_id'])
+                    if channel:
+                        await channel.send(f"<@{reminder['user_id']}>", embed=embed)
+                except:
+                    pass
+                
+        except Exception as e:
+            logger.error(f"Chyba v remind příkazu: {e}")
+            await interaction.followup.send("❌ **Nastala chyba při nastavování připomínky!**", ephemeral=True)
+    
+    # ========== RANDOM ==========
+    @app_commands.command(name="náhodně", description="Vygeneruje náhodné číslo")
+    @app_commands.describe(od="Od (výchozí: 1)", do="Do (výchozí: 100)")
+    async def random_slash(self, interaction: discord.Interaction, od: int = 1, do: int = 100):
+        """Vygeneruje náhodné číslo"""
+        if od >= do:
+            await interaction.response.send_message("❌ **Číslo 'od' musí být menší než 'do'!**", ephemeral=True)
+            return
+        
+        number = random.randint(od, do)
+        
+        embed = discord.Embed(
+            title="🎲 Náhodné číslo",
+            description=f"**Rozsah:** {od} - {do}\n**Výsledek:** **{number}**",
+            color=0x9b59b6
+        )
+        
+        await interaction.response.send_message(embed=embed)
+    
+    # ========== COIN FLIP ==========
+    @app_commands.command(name="mince", description="Hodí mincí")
+    async def coinflip_slash(self, interaction: discord.Interaction):
+        """Hodí mincí"""
+        result = random.choice(['Panna', 'Orel'])
+        emoji = '👑' if result == 'Orel' else '👸'
+        
+        embed = discord.Embed(
+            title=f"{emoji} Hod mincí",
+            description=f"**Výsledek:** **{result}**",
+            color=0xf1c40f
+        )
+        
+        await interaction.response.send_message(embed=embed)
+    
+    # ========== 8BALL ==========
+    @app_commands.command(name="koule", description="Magická 8 koule odpoví na tvou otázku")
+    @app_commands.describe(otázka="Tvá otázka")
+    async def eightball_slash(self, interaction: discord.Interaction, otázka: str):
+        """Magická 8 koule"""
+        responses = [
+            "Ano, určitě! ✅",
+            "Je to jisté. ✅",
+            "Bez pochyb. ✅",
+            "Ano, rozhodně. ✅",
+            "Můžeš se na to spolehnout. ✅",
+            "Jak já to vidím, ano. ✅",
+            "Nejspíš. ✅",
+            "Výhled dobrý. ✅",
+            "Ano. ✅",
+            "Známky naznačují ano. ✅",
+            
+            "Odpověď mlhavá, zkus znovu. 🔄",
+            "Zeptej se později. 🔄",
+            "Lépe ti to nyní neprozradím. 🔄",
+            "Teď to nedokážu předpovědět. 🔄",
+            "Soustřeď se a zeptej se znovu. 🔄",
+            
+            "Nepočítej s tím. ❌",
+            "Moje odpověď je ne. ❌",
+            "Moje zdroje říkají ne. ❌",
+            "Výhled není tak dobrý. ❌",
+            "Velmi pochybné. ❌"
+        ]
+        
+        answer = random.choice(responses)
+        
+        embed = discord.Embed(
+            title="🎱 Magická 8 koule",
+            color=0x2c3e50
+        )
+        
+        embed.add_field(name="❓ Otázka", value=otázka, inline=False)
+        embed.add_field(name="🎱 Odpověď", value=answer, inline=False)
+        embed.set_footer(text=f"Pro {interaction.user.display_name}")
+        
+        await interaction.response.send_message(embed=embed)
+    
+    # ========== HELP ==========
+    @app_commands.command(name="nápověda", description="Zobrazí nápovědu k příkazům")
+    @app_commands.describe(kategorie="Kategorie příkazů")
+    @app_commands.choices(kategorie=[
+        app_commands.Choice(name="🛡️ Moderace", value="moderation"),
+        app_commands.Choice(name="🎫 Tikety", value="tickets"),
+        app_commands.Choice(name="🎵 Hudba", value="music"),
+        app_commands.Choice(name="📋 MDT", value="mdt"),
+        app_commands.Choice(name="⚙️ Utility", value="utility")
+    ])
+    async def help_slash(self, interaction: discord.Interaction, kategorie: str = None):
+        """Zobrazí nápovědu k příkazům"""
+        if not kategorie:
+            # Hlavní nápověda
+            embed = discord.Embed(
+                title="🔷 TrueBlue APP - Nápověda",
+                description="Vítej v nápovědě TrueBlue bota! Vyber kategorii pomocí menu níže.",
+                color=0x3498db
+            )
+            
+            embed.add_field(
+                name="📋 Kategorie příkazů",
+                value="🛡️ **Moderace** - Moderační příkazy\n"
+                      "🎫 **Tikety** - Systém support tiketů\n"
+                      "🎵 **Hudba** - Přehrávání hudby z YouTube\n"
+                      "📋 **MDT** - Policejní databáze a občanky\n"
+                      "⚙️ **Utility** - Užitečné nástroje",
+                inline=False
+            )
+            
+            embed.add_field(
+                name="🔧 Rychlé příkazy",
+                value="`/ping` - Zkontroluj ping bota\n"
+                      "`/serverinfo` - Informace o serveru\n"
+                      "`/userinfo` - Informace o uživateli\n"
+                      "`/avatar` - Zobrazí avatar\n"
+                      "`/nápověda <kategorie>` - Detailní nápověda",
+                inline=False
+            )
+            
+            embed.set_footer(text=f"Celkem příkazů: {len(self.bot.tree.get_commands())}")
+            
+            await interaction.response.send_message(embed=embed)
+        else:
+            # Detailní nápověda podle kategorie
+            category_info = {
+                'moderation': {
+                    'title': '🛡️ Moderace',
+                    'description': 'Moderační příkazy pro správu serveru',
+                    'commands': [
+                        ('/vykopnout', 'Vykopne člena ze serveru'),
+                        ('/ban', 'Zabanuje člena na serveru'),
+                        ('/ztišit', 'Ztíší člena (timeout)'),
+                        ('/zrušit_ztišení', 'Zruší ztišení člena'),
+                        ('/smazat', 'Smaže zprávy v kanálu'),
+                        ('/varování', 'Udělí varování členovi'),
+                        ('/zamknout', 'Zamkne kanál'),
+                        ('/odemknout', 'Odemkne kanál'),
+                        ('/zpomalit', 'Nastaví slowmode')
+                    ]
+                },
+                'tickets': {
+                    'title': '🎫 Tikety',
+                    'description': 'Systém support tiketů a žádostí',
+                    'commands': [
+                        ('/ticket_panel', 'Vytvoří panel pro tikety'),
+                        ('/uzavřit_ticket', 'Uzavře aktuální ticket'),
+                        ('/ticket_stats', 'Zobrazí statistiky tiketů')
+                    ]
+                },
+                'music': {
+                    'title': '🎵 Hudba',
+                    'description': 'Hudební přehrávač s YouTube podporou',
+                    'commands': [
+                        ('/přehrát', 'Přehraje hudbu z YouTube'),
+                        ('/pozastavit', 'Pozastaví přehrávání'),
+                        ('/pokračovat', 'Obnoví přehrávání'),
+                        ('/přeskočit', 'Přeskočí píseň'),
+                        ('/zastavit', 'Zastaví hudbu'),
+                        ('/fronta', 'Zobrazí frontu písní'),
+                        ('/hlasitost', 'Nastaví hlasitost'),
+                        ('/odpojit', 'Odpojí bota z hlasového kanálu')
+                    ]
+                },
+                'mdt': {
+                    'title': '📋 MDT Systém',
+                    'description': 'Policejní databáze a systém občanek',
+                    'commands': [
+                        ('/obcanka', 'Vytvoří občanský průkaz'),
+                        ('/mdt_panel', 'Vytvoří MDT panel'),
+                        ('/mdt_hledat', 'Hledá v MDT databázi'),
+                        ('/mdt_zaznam', 'Přidá záznam k občanovi'),
+                        ('/pokuta', 'Vystaví pokutu'),
+                        ('/vezeni', 'Zadrží občana do vězení'),
+                        ('/mdt_info', 'Zobrazí info o občanovi')
+                    ]
+                },
+                'utility': {
+                    'title': '⚙️ Utility',
+                    'description': 'Užitečné nástroje a příkazy',
+                    'commands': [
+                        ('/ping', 'Zobrazí ping bota'),
+                        ('/serverinfo', 'Informace o serveru'),
+                        ('/userinfo', 'Informace o uživateli'),
+                        ('/avatar', 'Zobrazí avatar'),
+                        ('/say', 'Pošle zprávu jako bot'),
+                        ('/embed', 'Vytvoří embed zprávu'),
+                        ('/hlasování', 'Vytvoří hlasování'),
+                        ('/připomeň', 'Nastaví připomínku'),
+                        ('/náhodně', 'Vygeneruje náhodné číslo'),
+                        ('/mince', 'Hodí mincí'),
+                        ('/koule', 'Magická 8 koule')
+                    ]
+                }
+            }
+            
+            info = category_info.get(kategorie, {'title': 'Neplatná kategorie', 'description': '', 'commands': []})
+            
+            embed = discord.Embed(
+                title=f"{info['title']} - Příkazy",
+                description=info['description'],
+                color=0x3498db
+            )
+            
+            for command, description in info['commands']:
+                embed.add_field(name=command, value=description, inline=False)
+            
+            embed.set_footer(text="TrueBlue APP | /nápověda pro hlavní menu")
+            
+            await interaction.response.send_message(embed=embed)
+    
+    # ========== WELCOME SYSTEM ==========
+    @commands.Cog.listener()
+    async def on_member_join(self, member):
+        """Event při příchodu nového člena"""
+        try:
+            channel_id = self.bot.config['welcome'].get('channel_id')
+            if not channel_id:
+                return
+            
+            channel = member.guild.get_channel(int(channel_id))
+            if not channel:
+                return
+            
+            embed = discord.Embed(
+                title="👋 Vítej na serveru!",
+                description=f"Ahoj {member.mention}!\nVítej na **{member.guild.name}**! 🎉",
+                color=0x2ecc71,
+                timestamp=datetime.utcnow()
+            )
+            
+            embed.add_field(name="📊 Statistiky", value=f"**Počet členů:** {member.guild.member_count}")
+            embed.set_thumbnail(url=member.display_avatar.url)
+            embed.set_footer(text=f"ID: {member.id}")
+            
+            await channel.send(embed=embed)
+            
+        except Exception as e:
+            logger.error(f"Chyba v welcome systému: {e}")
+    
+    @commands.Cog.listener()
+    async def on_member_remove(self, member):
+        """Event při odchodu člena"""
+        try:
+            channel_id = self.bot.config['welcome'].get('goodbye_channel_id')
+            if not channel_id:
+                return
+            
+            channel = member.guild.get_channel(int(channel_id))
+            if not channel:
+                return
+            
+            embed = discord.Embed(
+                title="👋 Člen odešel",
+                description=f"{member.name} opustil server. 😢",
                 color=0xe74c3c,
                 timestamp=datetime.utcnow()
             )
             
-            try:
-                await ctx.author.send(embed=remind_embed)
-            except discord.Forbidden:
-                await ctx.send(f"{ctx.author.mention}", embed=remind_embed)
-                
-        except ValueError:
-            await ctx.send("❌ **Neplatný formát času!**")
+            embed.add_field(name="📊 Statistiky", value=f"**Zbývá členů:** {member.guild.member_count}")
+            
+            if member.joined_at:
+                days_in_server = (datetime.utcnow() - member.joined_at).days
+                embed.add_field(name="📅 Na serveru", value=f"{days_in_server} dní")
+            
+            embed.set_thumbnail(url=member.display_avatar.url)
+            embed.set_footer(text=f"ID: {member.id}")
+            
+            await channel.send(embed=embed)
+            
         except Exception as e:
-            logger.error(f"Chyba v remind příkazu: {e}")
-            await ctx.send("❌ **Nastala chyba při nastavování připomínky!**")
-    
-    @commands.hybrid_command(name='nastavení', aliases=['settings'])
-    @commands.has_permissions(manage_guild=True)
-    async def guild_settings(self, ctx, nastavení: str = None, *, hodnota: str = None):
-        """Správa nastavení serveru"""
-        if not nastavení:
-            # Zobrazení aktuálních nastavení
-            settings = await self.bot.db.get_guild_settings(ctx.guild.id)
-            
-            embed = discord.Embed(
-                title="⚙️ Nastavení serveru",
-                color=0x3498db,
-                timestamp=datetime.utcnow()
-            )
-            
-            # Aktuální nastavení
-            prefix = settings.get('prefix', '!') if settings else '!'
-            mod_channel = ctx.guild.get_channel(settings.get('mod_log_channel')) if settings and settings.get('mod_log_channel') else None
-            welcome_channel = ctx.guild.get_channel(settings.get('welcome_channel')) if settings and settings.get('welcome_channel') else None
-            goodbye_channel = ctx.guild.get_channel(settings.get('goodbye_channel')) if settings and settings.get('goodbye_channel') else None
-            automod = settings.get('automod_enabled', True) if settings else True
-            
-            embed.add_field(
-                name="🎯 Aktuální nastavení",
-                value=f"**Prefix:** `{prefix}`\n"
-                      f"**Mod log kanál:** {mod_channel.mention if mod_channel else 'Nenastaveno'}\n"
-                      f"**Auto-moderace:** {'🟢 Zapnuto' if automod else '🔴 Vypnuto'}\n"
-                      f"**Welcome kanál:** {welcome_channel.mention if welcome_channel else 'Nenastaveno'}\n"
-                      f"**Goodbye kanál:** {goodbye_channel.mention if goodbye_channel else 'Nenastaveno'}",
-                inline=False
-            )
-            
-            embed.add_field(
-                name="📋 Dostupná nastavení",
-                value="`prefix <nový_prefix>` - Změna prefixu\n"
-                      "`mod_log <#kanál>` - Nastavení mod log kanálu\n"
-                      "`automod <true/false>` - Zapnutí/vypnutí auto-moderace\n"
-                      "`welcome <#kanál>` - Nastavení welcome kanálu\n"
-                      "`goodbye <#kanál>` - Nastavení goodbye kanálu\n"
-                      "`welcome_msg <zpráva>` - Vlastní welcome zpráva\n"
-                      "`goodbye_msg <zpráva>` - Vlastní goodbye zpráva",
-                inline=False
-            )
-            
-            return await ctx.send(embed=embed)
-        
-        # Změna nastavení
-        if nastavení.lower() == 'prefix':
-            if not hodnota:
-                return await ctx.send("❌ **Musíš zadat nový prefix!**")
-            
-            if len(hodnota) > 5:
-                return await ctx.send("❌ **Prefix může mít maximálně 5 znaků!**")
-            
-            await self.bot.db.update_guild_setting(ctx.guild.id, 'prefix', hodnota)
-            await ctx.send(f"✅ **Prefix byl změněn na:** `{hodnota}`")
-            
-        elif nastavení.lower() == 'mod_log':
-            if not hodnota:
-                return await ctx.send("❌ **Musíš zadat kanál!**")
-            
-            try:
-                channel = await commands.TextChannelConverter().convert(ctx, hodnota)
-                await self.bot.db.update_guild_setting(ctx.guild.id, 'mod_log_channel', channel.id)
-                await ctx.send(f"✅ **Mod log kanál byl nastaven na:** {channel.mention}")
-            except commands.ChannelNotFound:
-                await ctx.send("❌ **Kanál nebyl nalezen!**")
-                
-        elif nastavení.lower() == 'automod':
-            if not hodnota:
-                return await ctx.send("❌ **Musíš zadat true/false!**")
-            
-            if hodnota.lower() in ['true', '1', 'ano', 'zapnuto']:
-                await self.bot.db.update_guild_setting(ctx.guild.id, 'automod_enabled', 1)
-                await ctx.send("✅ **Auto-moderace byla zapnuta!**")
-            elif hodnota.lower() in ['false', '0', 'ne', 'vypnuto']:
-                await self.bot.db.update_guild_setting(ctx.guild.id, 'automod_enabled', 0)
-                await ctx.send("✅ **Auto-moderace byla vypnuta!**")
-            else:
-                await ctx.send("❌ **Neplatná hodnota! Použij: true/false**")
-                
-        elif nastavení.lower() in ['welcome', 'příchod']:
-            if not hodnota:
-                return await ctx.send("❌ **Musíš zadat kanál!**")
-            
-            try:
-                channel = await commands.TextChannelConverter().convert(ctx, hodnota)
-                await self.bot.db.update_guild_setting(ctx.guild.id, 'welcome_channel', channel.id)
-                await ctx.send(f"✅ **Welcome kanál byl nastaven na:** {channel.mention}")
-            except commands.ChannelNotFound:
-                await ctx.send("❌ **Kanál nebyl nalezen!**")
-                
-        elif nastavení.lower() in ['goodbye', 'odchod']:
-            if not hodnota:
-                return await ctx.send("❌ **Musíš zadat kanál!**")
-            
-            try:
-                channel = await commands.TextChannelConverter().convert(ctx, hodnota)
-                await self.bot.db.update_guild_setting(ctx.guild.id, 'goodbye_channel', channel.id)
-                await ctx.send(f"✅ **Goodbye kanál byl nastaven na:** {channel.mention}")
-            except commands.ChannelNotFound:
-                await ctx.send("❌ **Kanál nebyl nalezen!**")
-                
-        elif nastavení.lower() in ['welcome_msg', 'příchod_zpráva']:
-            if not hodnota:
-                return await ctx.send("❌ **Musíš zadat zprávu!**")
-            
-            await self.bot.db.update_guild_setting(ctx.guild.id, 'welcome_message', hodnota)
-            await ctx.send(f"✅ **Welcome zpráva byla nastavena!**\n\n**Dostupné proměnné:**\n"
-                          "`{user}` - mention uživatele\n"
-                          "`{username}` - jméno uživatele\n"
-                          "`{server}` - název serveru\n"
-                          "`{count}` - počet členů")
-            
-        elif nastavení.lower() in ['goodbye_msg', 'odchod_zpráva']:
-            if not hodnota:
-                return await ctx.send("❌ **Musíš zadat zprávu!**")
-            
-            await self.bot.db.update_guild_setting(ctx.guild.id, 'goodbye_message', hodnota)
-            await ctx.send(f"✅ **Goodbye zpráva byla nastavena!**\n\n**Dostupné proměnné:**\n"
-                          "`{user}` - jméno uživatele\n"
-                          "`{username}` - jméno uživatele\n"
-                          "`{server}` - název serveru\n"
-                          "`{count}` - počet členů")
-        else:
-            await ctx.send("❌ **Neplatné nastavení! Použij `!nastavení` pro zobrazení dostupných možností.**")
+            logger.error(f"Chyba v goodbye systému: {e}")
 
 async def setup(bot):
     await bot.add_cog(Utility(bot))
-
