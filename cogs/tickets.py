@@ -194,12 +194,7 @@ class Tickets(commands.Cog):
             description="Vítej v našem support systému!\n\n"
                        "Pokud potřebuješ pomoc, máš dotaz nebo chceš nahlásit problém, "
                        "klikni na příslušné tlačítko níže a vytvoř si ticket.\n\n"
-                       "**Typy tiketů:**\n"
-                       "📋 **Obecný dotaz** - Běžné otázky a dotazy\n"
-                       "🐛 **Bug report** - Nahlášení chyb nebo problémů\n"
-                       "💡 **Návrh** - Nápady na vylepšení\n"
-                       "⚠️ **Stížnost** - Stížnosti na uživatele nebo obsah\n\n"
-                       "**Pravidla:**\n"
+                           "**Pravidla:**\n"
                        "• Jeden ticket na uživatele\n"
                        "• Buď trpělivý, support team ti odpoví co nejdříve\n"
                        "• Neposkytuj citlivé informace ve veřejných kanálech",
