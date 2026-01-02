@@ -21,7 +21,7 @@ def load_config():
         logger.error("Konfigurační soubor config.json nebyl nalezen!")
         return None
 
-class TrueBlueBot(commands.Bot):
+class VeltrixBot(commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
         intents.message_content = True
@@ -91,7 +91,7 @@ class TrueBlueBot(commands.Bot):
 
 async def main():
     """Hlavní funkce pro spuštění bota"""
-    bot = TrueBlueBot()
+    bot = VeltrixBot()
     
     # Získání Discord tokenu z environment proměnných
     token = os.getenv("DISCORD_TOKEN")

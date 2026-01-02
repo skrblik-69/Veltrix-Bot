@@ -549,7 +549,29 @@ class Utility(commands.Cog):
         embed.set_footer(text=f"Pro {interaction.user.display_name}")
         
         await interaction.response.send_message(embed=embed)
-    
+        
+    # ========== TRY ==========
+    @app_commands.command(name="try", description="Odpoví ano/ne")
+    @app_commands.describe(otázka="Tvá otázka")
+    async def try_slash(self, interaction: discord.Interaction, otázka: str):
+        """/try"""
+        responses = [
+            "Ano ✅",
+            "Ne ❌"
+        ]
+        
+        answer = random.choice(responses)
+        
+        embed = discord.Embed(
+            title="❓ /Try ",
+            color=0x2c3e50
+        )
+        
+        embed.add_field(name="❓ Odpověď", value=answer, inline=False)
+        embed.set_footer(text=f"🔄 Pro {interaction.user.display_name}")
+        
+        await interaction.response.send_message(embed=embed)
+        
     # ========== HELP ==========
     @app_commands.command(name="nápověda", description="Zobrazí nápovědu k příkazům")
     @app_commands.describe(kategorie="Kategorie příkazů")
@@ -661,7 +683,8 @@ class Utility(commands.Cog):
                         ('/připomeň', 'Nastaví připomínku'),
                         ('/náhodně', 'Vygeneruje náhodné číslo'),
                         ('/mince', 'Hodí mincí'),
-                        ('/koule', 'Magická 8 koule')
+                        ('/koule', 'Magická 8 koule'),
+                        ('/try', 'Odpoví ano/ne')
                     ]
                 }
             }
