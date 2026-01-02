@@ -150,3 +150,6 @@ discord.app_commands.errors.CommandInvokeError: Command 'ticket_panel' raised an
 [2026-01-02 10:31:39] [    INFO] __main__: Veltrix BOT#6033 je připojen a připraven!
 [2026-01-02 10:31:39] [    INFO] __main__: Owners: {1351593857346834505, 903247584192241694}
 [2026-01-02 10:31:39] [    INFO] __main__: Synchronizováno 30 slash příkazů
+[2026-01-02 10:11:53] [    INFO] VeltrixAPP: === Veltrix APP spuštěn ===
+[2026-01-02 10:11:53] [ WARNING] discord.client: PyNaCl is not installed, voice will NOT be supported
+[2026-01-02 10:11:53] [   ERROR] __main__: DISCORD_TOKEN nebyl nalezen v environment proměnných!

@@ -97,9 +97,9 @@ async def main():
     bot = VeltrixBot()
     
     # Získání Discord tokenu z environment proměnných
-    token = 'MTQzNTg3MjQ3NDgxNzYzMDI1OA.GOLrhb.Aj9U8gxSjcwPqn790kCppYNkZKOPxgFUhnKMpk'
+    token = os.getenv('DISCORD_TOKEN')
     if not token:
-        logger.error("TOKEN nebyl nalezen v environment proměnných!")
+        logger.error("DISCORD_TOKEN nebyl nalezen v environment proměnných!")
         return
     
     try:
