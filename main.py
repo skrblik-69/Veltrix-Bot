@@ -7,6 +7,9 @@ import os
 import logging
 from database import Database
 from utils.logging import setup_logging
+# Aby to jelo 24/7 na replitu s UptimeRobot
+from keep_alive import keep_alive
+keep_alive()
 
 # Nastavení logování
 setup_logging()

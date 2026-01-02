@@ -684,7 +684,8 @@ class Utility(commands.Cog):
                         ('/náhodně', 'Vygeneruje náhodné číslo'),
                         ('/mince', 'Hodí mincí'),
                         ('/koule', 'Magická 8 koule'),
-                        ('/try', 'Odpoví ano/ne')
+                        ('/try', 'Odpoví ano/ne'),
+                        ('/rep', 'Dej/Oddělej nekomu rep (ve vývoji)')
                     ]
                 }
             }
