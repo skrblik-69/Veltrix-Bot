@@ -73,7 +73,7 @@ class VeltrixBot(commands.Bot):
         await self.change_presence(
             activity=discord.Activity(
                 type=discord.ActivityType.watching,
-                name=f"/nápověda | TrueBlue APP"
+                name=f"/nápověda | VeltrixAPP"
             )
         )
         
@@ -94,9 +94,9 @@ async def main():
     bot = VeltrixBot()
     
     # Získání Discord tokenu z environment proměnných
-    token = os.getenv("DISCORD_TOKEN")
+    token = 'MTQzNTg3MjQ3NDgxNzYzMDI1OA.GOLrhb.Aj9U8gxSjcwPqn790kCppYNkZKOPxgFUhnKMpk'
     if not token:
-        logger.error("DISCORD_TOKEN nebyl nalezen v environment proměnných!")
+        logger.error("TOKEN nebyl nalezen v environment proměnných!")
         return
     
     try:

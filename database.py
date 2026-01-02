@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 class Database:
     def __init__(self):
-        self.db_path = "data/trueblue.db"
+        self.db_path = "data/veltrix.db"
     
     async def setup(self):
         """Inicializace databáze a vytvoření tabulek"""

@@ -587,8 +587,8 @@ class Utility(commands.Cog):
         if not kategorie:
             # Hlavní nápověda
             embed = discord.Embed(
-                title="🔷 TrueBlue APP - Nápověda",
-                description="Vítej v nápovědě TrueBlue bota! Vyber kategorii pomocí menu níže.",
+                title="🔷 VeltrixAPP - Nápověda",
+                description="Vítej v nápovědě Veltrix bota! Vyber kategorii pomocí menu níže.",
                 color=0x3498db
             )
             
@@ -700,7 +700,7 @@ class Utility(commands.Cog):
             for command, description in info['commands']:
                 embed.add_field(name=command, value=description, inline=False)
             
-            embed.set_footer(text="TrueBlue APP | /nápověda pro hlavní menu")
+            embed.set_footer(text="VeltrixAPP | /nápověda pro hlavní menu")
             
             await interaction.response.send_message(embed=embed)
     

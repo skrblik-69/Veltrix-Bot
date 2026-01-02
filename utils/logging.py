@@ -38,13 +38,13 @@ def setup_logging():
     logging.getLogger('discord.http').setLevel(logging.WARNING)
     logging.getLogger('discord.gateway').setLevel(logging.WARNING)
     
-    # Vlastní logger pro TrueBlue
-    logger = logging.getLogger('TrueBlue')
+    # Vlastní logger pro VeltrixAPP
+    logger = logging.getLogger('VeltrixAPP')
     logger.setLevel(logging.DEBUG)
     
-    logger.info("=== TrueBlue APP spuštěn ===")
+    logger.info("=== Veltrix APP spuštěn ===")
     return logger
 
 def get_logger(name):
     """Získá logger pro konkrétní modul"""
-    return logging.getLogger(f"TrueBlue.{name}")
+    return logging.getLogger(f"Veltrix.{name}")
